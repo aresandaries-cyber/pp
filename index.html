@@ -69,6 +69,10 @@ button{border:none;border-radius:999px;padding:9px 16px;font-size:13px;font-weig
 h2{font-size:15px;margin:22px 0 10px;}
 .actions{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
 .actions button, .fileBtn .label{padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.topbar .linkBtn{white-space:nowrap;padding:7px 12px;font-size:12px;}
+.linkBtn{display:inline-block;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--accent);color:var(--accent);text-decoration:none;}
+#clearBtn{background:transparent;border:1px solid var(--danger);color:var(--danger);}
 #exportBtn{background:transparent;border:1px solid var(--accent);color:var(--accent);}
 .fileBtn{position:relative;display:inline-block;}
 .fileBtn .label{display:inline-block;border:1px solid var(--accent);color:var(--accent);}
@@ -76,8 +80,13 @@ h2{font-size:15px;margin:22px 0 10px;}
 </style>
 </head>
 <body>
-<h1>🌼 皮克敏明信片收藏</h1>
+<div class="topbar">
+  <h1>🌼 皮克敏明信片收藏</h1>
+  <a id="loginBtn" class="linkBtn" href="https://claude.ai" target="_blank" rel="noopener">登入 claude.ai</a>
+</div>
 <p class="sub">上傳截圖 → 拖曳框選明信片範圍 → 自動辨識座標 → 存檔</p>
+<div id="storageStatus" class="status" style="margin:-8px 0 14px;">儲存狀態確認中…</div>
+<div id="migrateBox" class="card" style="display:none;font-size:13px;"></div>
 
 <div class="uploader">
   <div class="pickLabel">選擇圖片（可多選）</div>
@@ -90,6 +99,7 @@ h2{font-size:15px;margin:22px 0 10px;}
     <div class="label">匯入備份</div>
     <input id="importFile" type="file" accept=".json,application/json">
   </div>
+  <button id="clearBtn" type="button">清空資料庫</button>
 </div>
 
 <div id="pending"></div>
@@ -125,7 +135,7 @@ function openDB(){
 }
 let dbInst;
 async function getDB(){ if(!dbInst) dbInst = await openDB(); return dbInst; }
-async function dbAdd(record){
+async function localAdd(record){
   const d = await getDB();
   return new Promise((resolve,reject)=>{
     const tx = d.transaction('postcards','readwrite');
@@ -133,14 +143,14 @@ async function dbAdd(record){
     tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
   });
 }
-async function dbGetAll(){
+async function localGetAll(){
   const d = await getDB();
   return new Promise((resolve,reject)=>{
     const req = d.transaction('postcards','readonly').objectStore('postcards').getAll();
     req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
   });
 }
-async function dbPut(record){
+async function localPut(record){
   const d = await getDB();
   return new Promise((resolve,reject)=>{
     const tx = d.transaction('postcards','readwrite');
@@ -148,13 +158,61 @@ async function dbPut(record){
     tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
   });
 }
-async function dbDelete(id){
+async function localDelete(id){
   const d = await getDB();
   return new Promise((resolve,reject)=>{
     const tx = d.transaction('postcards','readwrite');
     tx.objectStore('postcards').delete(id);
     tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
   });
+}
+
+let cloud = null;
+const stripId = ({id, ...rest}) => rest;
+async function dbAdd(record){ return cloud ? cloud.add(stripId(record)) : localAdd(record); }
+async function dbGetAll(){
+  if(!cloud) return localGetAll();
+  const snap = await cloud.get();
+  return snap.docs.map(d => ({...d.data(), id: d.id}));
+}
+async function dbPut(record){ return cloud ? cloud.doc(record.id).set(stripId(record)) : localPut(record); }
+async function dbDelete(id){ return cloud ? cloud.doc(id).delete() : localDelete(id); }
+
+function setStatus(html){ document.getElementById('storageStatus').innerHTML = html; }
+
+async function initCloud(){
+  try{
+    const db = await claude.use('db');
+    const user = await claude.use('user');
+    if(db && user){
+      const uid = await user.id();
+      cloud = db.collection('data/users/' + uid + '/postcards');
+      setStatus('☁️ 資料已存到雲端，換裝置登入後也能看到');
+      document.getElementById('loginBtn').style.display = 'none';
+      await loadGallery();
+      checkMigration();
+      return;
+    }
+  }catch(e){ console.error(e); }
+  setStatus('💾 目前只存在此瀏覽器。登入 claude.ai 後重新開啟，即可改存雲端');
+}
+
+async function checkMigration(){
+  try{
+    const local = await localGetAll();
+    if(!local.length) return;
+    const box = document.getElementById('migrateBox');
+    box.style.display = 'block';
+    box.innerHTML = `此瀏覽器裡還有 ${local.length} 筆本機資料 <button id="migrateBtn" class="save" type="button">上傳到雲端</button>`;
+    document.getElementById('migrateBtn').onclick = async (ev)=>{
+      ev.target.disabled = true; ev.target.textContent = '上傳中…';
+      try{
+        for(const r of local){ await cloud.add(stripId(r)); await localDelete(r.id); }
+        box.style.display = 'none';
+        loadGallery();
+      }catch(e){ console.error(e); ev.target.disabled = false; ev.target.textContent = '上傳到雲端'; alert('上傳失敗，請再試一次'); }
+    };
+  }catch(e){ console.error(e); }
 }
 
 async function loadGallery(){
@@ -387,7 +445,8 @@ async function saveCard(card, img, box){
   const canvas = document.createElement('canvas');
   canvas.width=outW; canvas.height=outH;
   canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+  let dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+  if(dataUrl.length > 230000) dataUrl = canvas.toDataURL('image/jpeg', 0.5);
 
   const btn = card.querySelector('.save'); btn.disabled=true; btn.textContent='保存中…';
   try{
@@ -439,9 +498,27 @@ document.getElementById('importFile').addEventListener('change', async (e)=>{
   e.target.value='';
 });
 
+document.getElementById('clearBtn').onclick = async ()=>{
+  try{
+    const docs = await dbGetAll();
+    if(!docs.length){ alert('資料庫目前是空的'); return; }
+    const where = cloud ? '雲端' : '此瀏覽器';
+    if(!confirm(`確定要清空${where}的全部 ${docs.length} 筆明信片嗎？\n此動作無法復原，建議先按「匯出備份」。`)) return;
+    if(!confirm('再確認一次：真的要全部刪除嗎？')) return;
+    const btn = document.getElementById('clearBtn'); btn.disabled = true; btn.textContent = '清空中…';
+    for(const d of docs) await dbDelete(d.id);
+    btn.disabled = false; btn.textContent = '清空資料庫';
+    loadGallery();
+  }catch(e){
+    console.error(e); alert('清空失敗：' + (e?.message || e));
+    const btn = document.getElementById('clearBtn'); btn.disabled = false; btn.textContent = '清空資料庫';
+  }
+};
+
 document.getElementById('lightbox').onclick = ()=> document.getElementById('lightbox').classList.remove('show');
 
 loadGallery();
+initCloud();
 </script>
 </body>
 </html>
