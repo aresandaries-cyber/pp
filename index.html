@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>皮克敏明信片收藏</title>
+<style>
+:root{
+  --bg:#faf7f2; --fg:#2b2620; --card:#ffffff; --border:#e4ddd0;
+  --accent:#e0a93a; --accent-fg:#fff; --muted:#8a8070; --danger:#c0564a;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1812; --fg:#f1ebe0; --card:#2a241c; --border:#45392a;
+    --accent:#e0a93a; --accent-fg:#1c1812; --muted:#a79a82; --danger:#e08277;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1812; --fg:#f1ebe0; --card:#2a241c; --border:#45392a;
+  --accent:#e0a93a; --accent-fg:#1c1812; --muted:#a79a82; --danger:#e08277;
+  color-scheme: dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;padding:16px;padding-bottom:calc(32px + env(safe-area-inset-bottom,0px));}
+h1{font-size:19px;margin:4px 0 2px;}
+p.sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+.uploader{border:2px dashed var(--border);border-radius:14px;padding:18px;text-align:center;margin-bottom:18px;}
+.uploader{position:relative;}
+.pickLabel{display:inline-block;background:var(--accent);color:var(--accent-fg);padding:10px 20px;border-radius:999px;font-weight:600;font-size:14px;}
+.uploader input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;}
+.imgwrap{position:relative;max-width:100%;touch-action:none;user-select:none;border-radius:8px;overflow:hidden;}
+.imgwrap img{display:block;width:100%;height:auto;}
+.cropbox{position:absolute;border:2px solid var(--accent);background:rgba(224,169,58,.15);cursor:move;}
+.handle{position:absolute;right:-8px;bottom:-8px;width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:nwse-resize;border:2px solid var(--card);}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.row input{flex:1;min-width:110px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:13px;}
+.status{font-size:12px;color:var(--muted);margin-top:6px;}
+.btns{display:flex;gap:8px;margin-top:10px;}
+button{border:none;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+.save{background:var(--accent);color:var(--accent-fg);}
+.discard{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.toolbar input{flex:1 1 100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg);font-size:13px;}
+.toolbar select{flex:1;min-width:140px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg);font-size:13px;}
+.folder{margin-bottom:12px;}
+.folder-header{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;}
+.folder-header .count{display:flex;align-items:center;gap:6px;color:var(--muted);font-weight:400;font-size:12px;}
+.folder-header .arrow{transition:transform .15s;}
+.folder.collapsed .arrow{transform:rotate(-90deg);}
+.folder.collapsed .gallery{display:none;}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:10px;}
+.gcard{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.gcard img{width:100%;aspect-ratio:1;object-fit:cover;display:block;cursor:pointer;}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:24px;padding-top:calc(24px + env(safe-area-inset-top,0px));padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:50;cursor:zoom-out;}
+.lightbox.show{display:flex;}
+.lightbox img{max-width:100%;max-height:100%;border-radius:10px;cursor:default;}
+.gcard .gi{padding:8px;font-size:12px;}
+.gcard a{color:var(--accent);text-decoration:none;}
+.gcard .rowbtns{display:flex;border-top:1px solid var(--border);}
+.gcard .rowbtns button{flex:1;background:none;font-size:11px;padding:6px 4px;text-align:center;border-radius:0;}
+.gcard .edit{color:var(--accent);border-right:1px solid var(--border);}
+.gcard .del{color:var(--danger);}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
+h2{font-size:15px;margin:22px 0 10px;}
+.actions{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.actions button, .fileBtn .label{padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;}
+#exportBtn{background:transparent;border:1px solid var(--accent);color:var(--accent);}
+.fileBtn{position:relative;display:inline-block;}
+.fileBtn .label{display:inline-block;border:1px solid var(--accent);color:var(--accent);}
+.fileBtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+</style>
+</head>
+<body>
+<h1>🌼 皮克敏明信片收藏</h1>
+<p class="sub">上傳截圖 → 拖曳框選明信片範圍 → 自動辨識座標 → 存檔</p>
+
+<div class="uploader">
+  <div class="pickLabel">選擇圖片（可多選）</div>
+  <input id="file" type="file" accept="image/*" multiple>
+</div>
+
+<div class="actions">
+  <button id="exportBtn" type="button">匯出備份</button>
+  <div class="fileBtn">
+    <div class="label">匯入備份</div>
+    <input id="importFile" type="file" accept=".json,application/json">
+  </div>
+</div>
+
+<div id="pending"></div>
+
+<h2>已保存的明信片</h2>
+<div class="toolbar">
+  <input id="searchBox" type="search" placeholder="🔍 搜尋名稱或國家">
+  <select id="viewMode">
+    <option value="folder">📁 依國家資料夾</option>
+    <option value="all">🖼️ 全部顯示</option>
+  </select>
+  <select id="sortMode">
+    <option value="date-desc">日期：新 → 舊</option>
+    <option value="date-asc">日期：舊 → 新</option>
+    <option value="name-asc">名稱：A → Z</option>
+    <option value="name-desc">名稱：Z → A</option>
+  </select>
+</div>
+<div id="gallery"></div>
+<div id="emptyMsg" class="empty" style="display:none;">目前還沒有保存的明信片</div>
+
+<div id="lightbox" class="lightbox"><img id="lightboxImg" alt=""></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<script>
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open('pikminPostcards', 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore('postcards', {keyPath:'id', autoIncrement:true});
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+let dbInst;
+async function getDB(){ if(!dbInst) dbInst = await openDB(); return dbInst; }
+async function dbAdd(record){
+  const d = await getDB();
+  return new Promise((resolve,reject)=>{
+    const tx = d.transaction('postcards','readwrite');
+    tx.objectStore('postcards').add(record);
+    tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
+  });
+}
+async function dbGetAll(){
+  const d = await getDB();
+  return new Promise((resolve,reject)=>{
+    const req = d.transaction('postcards','readonly').objectStore('postcards').getAll();
+    req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
+  });
+}
+async function dbPut(record){
+  const d = await getDB();
+  return new Promise((resolve,reject)=>{
+    const tx = d.transaction('postcards','readwrite');
+    tx.objectStore('postcards').put(record);
+    tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
+  });
+}
+async function dbDelete(id){
+  const d = await getDB();
+  return new Promise((resolve,reject)=>{
+    const tx = d.transaction('postcards','readwrite');
+    tx.objectStore('postcards').delete(id);
+    tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
+  });
+}
+
+async function loadGallery(){
+  try{
+    const docs = await dbGetAll();
+    renderGallery(docs);
+  }catch(e){ console.error(e); }
+}
+
+const openFolders = new Set();
+let curDocs = [];
+document.addEventListener('DOMContentLoaded', ()=>{
+  for(const id of ['viewMode','sortMode'])
+    document.getElementById(id).addEventListener('change', ()=> renderGallery(curDocs));
+  document.getElementById('searchBox').addEventListener('input', ()=> renderGallery(curDocs));
+});
+
+function renderGallery(docs){
+  const g = document.getElementById('gallery');
+  const empty = document.getElementById('emptyMsg');
+  g.innerHTML='';
+  if(!docs.length){ empty.textContent='目前還沒有保存的明信片'; empty.style.display='block'; return; }
+  empty.style.display='none';
+  curDocs = docs;
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  if(q){
+    docs = docs.filter(v => (v.name||'').toLowerCase().includes(q) || (countryFor(v.lat,v.lng)||'').toLowerCase().includes(q));
+    if(!docs.length){ empty.textContent='找不到符合的明信片'; empty.style.display='block'; return; }
+  }
+  const sm = document.getElementById('sortMode').value;
+  const byName = (a,b)=>{
+    const x=a.name||'', y=b.name||'';
+    if(!x && y) return 1;
+    if(x && !y) return -1;
+    return x.localeCompare(y,'zh-Hant');
+  };
+  docs.sort(
+    sm==='date-asc' ? (a,b)=>(a.savedAt||0)-(b.savedAt||0) :
+    sm==='name-asc' ? byName :
+    sm==='name-desc' ? (a,b)=>{
+      const x=a.name||'', y=b.name||'';
+      if(!x && y) return 1;
+      if(x && !y) return -1;
+      return y.localeCompare(x,'zh-Hant');
+    } :
+    (a,b)=>(b.savedAt||0)-(a.savedAt||0)
+  );
+
+  if(document.getElementById('viewMode').value==='all'){
+    const grid = document.createElement('div');
+    grid.className = 'gallery';
+    g.appendChild(grid);
+    renderCards(grid, docs, docs);
+    return;
+  }
+
+  const groups = {};
+  for(const v of docs){
+    const country = countryFor(v.lat, v.lng) || '未分類';
+    (groups[country] = groups[country] || []).push(v);
+  }
+  const names = Object.keys(groups).sort((a,b)=> a==='未分類'?1 : b==='未分類'?-1 : a.localeCompare(b,'zh-Hant'));
+  if(openFolders.size===0 && names.length) openFolders.add(names[0]);
+
+  for(const country of names){
+    const items = groups[country];
+    const folder = document.createElement('div');
+    folder.className = 'folder' + (openFolders.has(country) ? '' : ' collapsed');
+    const header = document.createElement('div');
+    header.className = 'folder-header';
+    header.innerHTML = `<span>📁 ${escapeHtml(country)}</span><span class="count">${items.length} 筆<span class="arrow">▾</span></span>`;
+    header.onclick = ()=>{ openFolders.has(country) ? openFolders.delete(country) : openFolders.add(country); renderGallery(curDocs); };
+    const grid = document.createElement('div');
+    grid.className = 'gallery';
+    folder.appendChild(header);
+    folder.appendChild(grid);
+    g.appendChild(folder);
+    renderCards(grid, items, docs);
+  }
+}
+
+function renderCards(grid, items, allDocs){
+  for(const v of items){
+    const el = document.createElement('div');
+    el.className='gcard';
+    const mapsUrl = (v.lat!=null && v.lng!=null) ? `https://www.google.com/maps?q=${v.lat},${v.lng}` : '#';
+    el.innerHTML = `<img src="${v.img}" alt="">
+      <div class="gi">${v.name?`<div>${escapeHtml(v.name)}</div>`:''}
+      ${v.lat!=null?`<a href="${mapsUrl}" target="_blank">${v.lat.toFixed(6)}, ${v.lng.toFixed(6)}</a>`:'<span style="color:var(--muted)">無座標</span>'}</div>
+      <div class="rowbtns"><button class="edit">編輯</button><button class="del">刪除</button></div>`;
+    el.querySelector('img').onclick = ()=>{
+      document.getElementById('lightboxImg').src = v.img;
+      document.getElementById('lightbox').classList.add('show');
+    };
+    el.querySelector('.del').onclick = async ()=>{ try{ await dbDelete(v.id); loadGallery(); }catch(e){console.error(e);} };
+    el.querySelector('.edit').onclick = async ()=>{
+      const name = prompt('地點名稱', v.name||'');
+      if(name===null) return;
+      const latStr = prompt('緯度', v.lat!=null?v.lat:'');
+      if(latStr===null) return;
+      const lngStr = prompt('經度', v.lng!=null?v.lng:'');
+      if(lngStr===null) return;
+      const lat = parseFloat(latStr), lng = parseFloat(lngStr);
+      try{
+        await dbPut({...v, name:name.trim(), lat:isNaN(lat)?null:lat, lng:isNaN(lng)?null:lng});
+        loadGallery();
+      }catch(e){ console.error(e); alert('更新失敗'); }
+    };
+    grid.appendChild(el);
+  }
+}
+
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+const CBB={"AF":["Afghanistan",[60.53,29.32,75.16,38.49]],"AO":["Angola",[11.64,-17.93,24.08,-4.44]],"AL":["Albania",[19.3,39.62,21.02,42.69]],"AE":["阿聯",[51.58,22.5,56.4,26.06]],"AR":["阿根廷",[-73.42,-55.25,-53.63,-21.83]],"AM":["Armenia",[43.58,38.74,46.51,41.25]],"AQ":["Antarctica",[-180,-90,180,-63.27]],"TF":["French Southern Territories",[68.72,-49.78,70.56,-48.63]],"AU":["澳洲",[113.34,-43.63,153.57,-10.67]],"AT":["奧地利",[9.48,46.43,16.98,49.04]],"AZ":["Azerbaijan",[44.79,38.27,50.39,41.86]],"BI":["Burundi",[29.02,-4.5,30.75,-2.35]],"BE":["比利時",[2.51,49.53,6.16,51.48]],"BJ":["Benin",[0.77,6.14,3.8,12.24]],"BF":["Burkina Faso",[-5.47,9.61,2.18,15.12]],"BD":["Bangladesh",[88.08,20.67,92.67,26.45]],"BG":["Bulgaria",[22.38,41.23,28.56,44.23]],"BS":["Bahamas",[-78.98,23.71,-77,27.04]],"BA":["Bosnia and Herzegovina",[15.75,42.65,19.6,45.23]],"BY":["Belarus",[23.2,51.32,32.69,56.17]],"BZ":["Belize",[-89.23,15.89,-88.11,18.5]],"BO":["Bolivia",[-69.59,-22.87,-57.5,-9.76]],"BR":["巴西",[-73.99,-33.77,-34.73,5.24]],"BN":["汶萊",[114.2,4.01,115.45,5.45]],"BT":["Bhutan",[88.81,26.72,92.1,28.3]],"BW":["Botswana",[19.9,-26.83,29.43,-17.66]],"CF":["Central African Republic",[14.46,2.27,27.37,11.14]],"CA":["加拿大",[-141,41.68,-52.65,73.23]],"CH":["瑞士",[6.02,45.78,10.44,47.83]],"CL":["智利",[-75.64,-55.61,-66.96,-17.58]],"CN":["中國大陸",[73.68,18.2,135.03,53.46]],"CI":["Ivory Coast",[-8.6,4.34,-2.56,10.52]],"CM":["Cameroon",[8.49,1.73,16.01,12.86]],"CD":["Congo (Kinshasa)",[12.18,-13.26,31.17,5.26]],"CG":["Congo (Brazzaville)",[11.09,-5.04,18.45,3.73]],"CO":["哥倫比亞",[-78.99,-4.3,-66.88,12.44]],"CR":["哥斯大黎加",[-85.94,8.23,-82.55,11.22]],"CU":["古巴",[-84.97,19.86,-74.18,23.19]],"CY":["Cyprus",[32.26,34.57,34,35.17]],"CZ":["捷克",[12.24,48.56,18.85,51.12]],"DE":["德國",[5.99,47.3,15.02,54.98]],"DJ":["Djibouti",[41.66,10.93,43.32,12.7]],"DK":["丹麥",[8.09,54.8,12.69,57.73]],"DO":["Dominican Republic",[-71.95,17.6,-68.32,19.88]],"DZ":["Algeria",[-8.68,19.06,12,37.12]],"EC":["Ecuador",[-80.97,-4.96,-75.23,1.38]],"EG":["埃及",[24.7,22,36.87,31.59]],"ER":["Eritrea",[36.32,12.46,43.08,18]],"ES":["西班牙",[-9.39,35.95,3.04,43.75]],"EE":["愛沙尼亞",[23.34,57.47,28.13,59.61]],"ET":["Ethiopia",[32.95,3.42,47.79,14.96]],"FI":["芬蘭",[20.65,59.85,31.52,70.16]],"FJ":["Fiji",[-180,-18.29,180,-16.02]],"FK":["Falkland Islands",[-61.2,-52.3,-57.75,-51.1]],"FR":["法國",[-5,42.5,9.56,51.15]],"GA":["Gabon",[8.8,-3.98,14.43,2.33]],"GB":["英國",[-7.57,49.96,1.68,58.64]],"GE":["Georgia",[39.96,41.06,46.64,43.55]],"GH":["Ghana",[-3.24,4.71,1.06,11.1]],"GN":["Guinea",[-15.13,7.31,-7.83,12.59]],"GM":["Gambia",[-16.84,13.13,-13.84,13.88]],"GW":["Guinea Bissau",[-16.68,11.04,-13.7,12.63]],"GQ":["Equatorial Guinea",[9.31,1.01,11.29,2.28]],"GR":["希臘",[20.15,34.92,26.6,41.83]],"GL":["Greenland",[-73.3,60.04,-12.21,83.65]],"GT":["Guatemala",[-92.23,13.74,-88.23,17.82]],"GY":["Guyana",[-61.41,1.27,-56.54,8.37]],"HN":["Honduras",[-89.35,12.98,-83.15,16.01]],"HR":["克羅埃西亞",[13.66,42.48,19.39,46.5]],"HT":["Haiti",[-74.46,18.03,-71.62,19.92]],"HU":["匈牙利",[16.2,45.76,22.71,48.62]],"ID":["印尼",[95.29,-10.36,141.03,5.48]],"IN":["印度",[68.18,7.97,97.4,35.49]],"IE":["愛爾蘭",[-9.98,51.67,-6.03,55.13]],"IR":["伊朗",[44.11,25.08,63.32,39.71]],"IQ":["Iraq",[38.79,29.1,48.57,37.39]],"IS":["冰島",[-24.33,63.5,-13.61,66.53]],"IL":["以色列",[34.27,29.5,35.84,33.28]],"IT":["義大利",[6.75,36.62,18.48,47.12]],"JM":["Jamaica",[-78.34,17.7,-76.2,18.52]],"JO":["Jordan",[34.92,29.2,39.2,33.38]],"JP":["日本",[129.41,31.03,145.54,45.55]],"KZ":["Kazakhstan",[46.47,40.66,87.36,55.39]],"KE":["Kenya",[33.89,-4.68,41.86,5.51]],"KG":["Kyrgyzstan",[69.46,39.28,80.26,43.3]],"KH":["柬埔寨",[102.35,10.49,107.61,14.57]],"KR":["韓國",[126.12,34.39,129.47,38.61]],"KW":["Kuwait",[46.57,28.53,48.42,30.06]],"LA":["寮國",[100.12,13.88,107.56,22.46]],"LB":["Lebanon",[35.13,33.09,36.61,34.64]],"LR":["Liberia",[-11.44,4.36,-7.54,8.54]],"LY":["Libya",[9.32,19.58,25.16,33.14]],"LK":["斯里蘭卡",[79.7,5.97,81.79,9.82]],"LS":["Lesotho",[27,-30.65,29.33,-28.65]],"LT":["立陶宛",[21.06,53.91,26.59,56.37]],"LU":["Luxembourg",[5.67,49.44,6.24,50.13]],"LV":["拉脫維亞",[21.06,55.62,28.18,57.97]],"MA":["摩洛哥",[-17.02,21.42,-1.12,35.76]],"MD":["Moldova",[26.62,45.49,30.02,48.47]],"MG":["Madagascar",[43.25,-25.6,50.48,-12.04]],"MX":["墨西哥",[-117.13,14.54,-86.81,32.72]],"MK":["Macedonia",[20.46,40.84,22.95,42.32]],"ML":["Mali",[-12.17,10.1,4.27,24.97]],"MM":["緬甸",[92.3,9.93,101.18,28.34]],"ME":["Montenegro",[18.45,41.88,20.34,43.52]],"MN":["蒙古",[87.75,41.6,119.77,52.05]],"MZ":["Mozambique",[30.18,-26.74,40.78,-10.32]],"MR":["Mauritania",[-17.06,14.62,-4.92,27.4]],"MW":["Malawi",[32.69,-16.8,35.77,-9.23]],"MY":["馬來西亞",[100.09,0.77,119.18,6.93]],"NA":["Namibia",[11.73,-29.05,25.08,-16.94]],"NC":["New Caledonia",[164.03,-22.4,167.12,-20.11]],"NE":["Niger",[0.3,11.66,15.9,23.47]],"NG":["Nigeria",[2.69,4.24,14.58,13.87]],"NI":["Nicaragua",[-87.67,10.73,-83.15,15.02]],"NL":["荷蘭",[3.31,50.8,7.09,53.51]],"NO":["挪威",[4.99,58.08,31.29,70.92]],"NP":["尼泊爾",[80.09,26.4,88.17,30.42]],"NZ":["紐西蘭",[166.51,-46.64,178.52,-34.45]],"OM":["Oman",[52,16.65,59.81,26.4]],"PK":["巴基斯坦",[60.87,23.69,77.84,37.13]],"PA":["Panama",[-82.97,7.22,-77.24,9.61]],"PE":["秘魯",[-81.41,-18.35,-68.67,-0.06]],"PH":["菲律賓",[117.17,5.58,126.54,18.51]],"PG":["Papua New Guinea",[141,-10.65,156.02,-2.5]],"PL":["波蘭",[14.07,49.03,24.03,54.85]],"PR":["Puerto Rico",[-67.24,17.95,-65.59,18.52]],"KP":["北韓",[124.27,37.67,130.78,42.99]],"PT":["葡萄牙",[-9.53,36.84,-6.39,42.28]],"PY":["Paraguay",[-62.69,-27.55,-54.29,-19.34]],"QA":["Qatar",[50.74,24.56,51.61,26.11]],"RO":["羅馬尼亞",[20.22,43.69,29.63,48.22]],"RU":["俄羅斯",[-180,41.15,180,81.25]],"RW":["Rwanda",[29.02,-2.92,30.82,-1.13]],"SA":["沙烏地阿拉伯",[34.63,16.35,55.67,32.16]],"SD":["Sudan",[21.94,8.62,38.41,22]],"SS":["South Sudan",[23.89,3.51,35.3,12.25]],"SN":["Senegal",[-17.63,12.33,-11.47,16.6]],"SB":["Solomon Islands",[156.49,-10.83,162.4,-6.6]],"SL":["Sierra Leone",[-13.25,6.79,-10.23,10.05]],"SV":["El Salvador",[-90.1,13.15,-87.72,14.42]],"SO":["Somalia",[40.98,-1.68,51.13,12.02]],"RS":["Serbia",[18.83,42.25,22.99,46.17]],"SR":["Suriname",[-58.04,1.82,-53.96,6.03]],"SK":["斯洛伐克",[16.88,47.76,22.56,49.57]],"SI":["斯洛維尼亞",[13.7,45.45,16.56,46.85]],"SE":["瑞典",[11.03,55.36,23.9,69.11]],"SZ":["Swaziland",[30.68,-27.29,32.07,-25.66]],"SY":["Syria",[35.7,32.31,42.35,37.23]],"TD":["Chad",[13.54,7.42,23.89,23.41]],"TG":["Togo",[-0.05,5.93,1.87,11.02]],"TH":["泰國",[97.38,5.69,105.59,20.42]],"TJ":["Tajikistan",[67.44,36.74,74.98,40.96]],"TM":["Turkmenistan",[52.5,35.27,66.55,42.75]],"TL":["East Timor",[124.97,-9.39,127.34,-8.27]],"TT":["Trinidad and Tobago",[-61.95,10,-60.9,10.89]],"TN":["Tunisia",[7.52,30.31,11.49,37.35]],"TR":["土耳其",[26.04,35.82,44.79,42.14]],"TW":["台灣",[120.11,21.97,121.95,25.3]],"TZ":["Tanzania",[29.34,-11.72,40.32,-0.95]],"UG":["Uganda",[29.58,-1.44,35.04,4.25]],"UA":["烏克蘭",[22.09,44.36,40.08,52.34]],"UY":["Uruguay",[-58.43,-34.95,-53.21,-30.11]],"US":["美國",[-125,25,-66.96,49.5]],"UZ":["Uzbekistan",[55.93,37.14,73.06,45.59]],"VE":["Venezuela",[-73.3,0.72,-59.76,12.16]],"VN":["越南",[102.17,8.6,109.34,23.35]],"VU":["Vanuatu",[166.63,-16.6,167.84,-14.63]],"PS":["West Bank",[34.93,31.35,35.55,32.53]],"YE":["Yemen",[42.6,12.59,53.11,19]],"ZA":["南非",[16.34,-34.82,32.83,-22.09]],"ZM":["Zambia",[21.89,-17.96,33.49,-8.24]],"ZW":["Zimbabwe",[25.26,-22.27,32.85,-15.51]]};
+
+function countryFor(lat,lng){
+  if(lat==null||lng==null||isNaN(lat)||isNaN(lng)) return null;
+  let best=null, bestArea=Infinity;
+  for(const code in CBB){
+    const [name,[minLon,minLat,maxLon,maxLat]] = CBB[code];
+    if(lng>=minLon && lng<=maxLon && lat>=minLat && lat<=maxLat){
+      const area=(maxLon-minLon)*(maxLat-minLat);
+      if(area<bestArea){ bestArea=area; best=name; }
+    }
+  }
+  return best;
+}
+
+document.getElementById('file').addEventListener('change', (e)=>{
+  for(const f of e.target.files) addPending(f);
+  e.target.value='';
+});
+
+function addPending(file){
+  const reader = new FileReader();
+  reader.onload = ()=> buildCard(reader.result);
+  reader.readAsDataURL(file);
+}
+
+function buildCard(dataUrl){
+  const card = document.createElement('div');
+  card.className='card';
+  card.innerHTML = `
+    <div class="imgwrap">
+      <img src="${dataUrl}">
+      <div class="cropbox"><div class="handle"></div></div>
+    </div>
+    <div class="status">辨識座標中…</div>
+    <div class="row">
+      <input class="nameInput" placeholder="地點名稱（選填）">
+      <input class="latInput" placeholder="緯度">
+      <input class="lngInput" placeholder="經度">
+    </div>
+    <div class="btns">
+      <button class="save">保存明信片</button>
+      <button class="discard">捨棄</button>
+    </div>`;
+  document.getElementById('pending').appendChild(card);
+
+  const img = card.querySelector('.imgwrap img');
+  const wrap = card.querySelector('.imgwrap');
+  const box = card.querySelector('.cropbox');
+  const handle = card.querySelector('.handle');
+
+  img.onload = ()=>{
+    const w = wrap.clientWidth, h = img.clientHeight;
+    const bw = w*0.5, bh = bw;
+    box.style.left = (w*0.45)+'px'; box.style.top = (h*0.1)+'px';
+    box.style.width = bw+'px'; box.style.height = bh+'px';
+    runOCR(dataUrl, card);
+  };
+
+  let drag=null;
+  box.addEventListener('pointerdown', (ev)=>{
+    if(ev.target===handle) return;
+    drag={type:'move', sx:ev.clientX, sy:ev.clientY, l:box.offsetLeft, t:box.offsetTop};
+    box.setPointerCapture(ev.pointerId);
+  });
+  handle.addEventListener('pointerdown', (ev)=>{
+    ev.stopPropagation();
+    drag={type:'resize', sx:ev.clientX, sy:ev.clientY, w:box.offsetWidth, h:box.offsetHeight};
+    handle.setPointerCapture(ev.pointerId);
+  });
+  wrap.addEventListener('pointermove', (ev)=>{
+    if(!drag) return;
+    const dx=ev.clientX-drag.sx, dy=ev.clientY-drag.sy;
+    if(drag.type==='move'){
+      let nl=drag.l+dx, nt=drag.t+dy;
+      nl=Math.max(0,Math.min(nl, wrap.clientWidth-box.offsetWidth));
+      nt=Math.max(0,Math.min(nt, wrap.clientHeight-box.offsetHeight));
+      box.style.left=nl+'px'; box.style.top=nt+'px';
+    } else {
+      let nw=Math.max(30,drag.w+dx), nh=Math.max(30,drag.h+dy);
+      nw=Math.min(nw, wrap.clientWidth-box.offsetLeft);
+      nh=Math.min(nh, wrap.clientHeight-box.offsetTop);
+      box.style.width=nw+'px'; box.style.height=nh+'px';
+    }
+  });
+  window.addEventListener('pointerup', ()=> drag=null);
+
+  card.querySelector('.discard').onclick = ()=> card.remove();
+  card.querySelector('.save').onclick = ()=> saveCard(card, img, box);
+}
+
+async function runOCR(dataUrl, card){
+  const statusEl = card.querySelector('.status');
+  try{
+    const { data:{ text } } = await Tesseract.recognize(dataUrl, 'eng');
+    const m = text.match(/(-?\d{1,3}\.\d{3,8})\s*,\s*(-?\d{1,3}\.\d{3,8})/);
+    if(m){
+      card.querySelector('.latInput').value = m[1];
+      card.querySelector('.lngInput').value = m[2];
+      const c = countryFor(parseFloat(m[1]), parseFloat(m[2]));
+      statusEl.textContent = c ? `已自動辨識座標，判斷為：${c}（可手動修正）` : '已自動辨識座標，可手動修正';
+    } else {
+      statusEl.textContent = '未能自動辨識座標，請手動輸入';
+    }
+  }catch(e){
+    statusEl.textContent = '辨識失敗，請手動輸入座標';
+  }
+}
+
+async function saveCard(card, img, box){
+  const scale = img.naturalWidth / img.clientWidth;
+  const sx = box.offsetLeft*scale, sy = box.offsetTop*scale;
+  const sw = box.offsetWidth*scale, sh = box.offsetHeight*scale;
+  const maxOut = 480;
+  const outW = Math.min(maxOut, sw), outH = outW*(sh/sw);
+  const canvas = document.createElement('canvas');
+  canvas.width=outW; canvas.height=outH;
+  canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+
+  const btn = card.querySelector('.save'); btn.disabled=true; btn.textContent='保存中…';
+  try{
+    const lat = parseFloat(card.querySelector('.latInput').value);
+    const lng = parseFloat(card.querySelector('.lngInput').value);
+    const name = card.querySelector('.nameInput').value.trim();
+    await dbAdd({ img: dataUrl, lat: isNaN(lat)?null:lat, lng: isNaN(lng)?null:lng, name, savedAt: Date.now() });
+    card.remove();
+    loadGallery();
+  }catch(e){
+    console.error(e); btn.disabled=false; btn.textContent='保存明信片'; alert('保存失敗，瀏覽器儲存空間可能不足');
+  }
+}
+
+document.getElementById('exportBtn').onclick = async ()=>{
+  try{
+    const docs = await dbGetAll();
+    if(!docs.length){ alert('目前沒有資料可以匯出'); return; }
+    const blob = new Blob([JSON.stringify(docs)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'pikmin-postcards-backup.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=> URL.revokeObjectURL(url), 1000);
+  }catch(e){
+    console.error(e); alert('匯出失敗：' + (e?.message || e));
+  }
+};
+
+document.getElementById('importFile').addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  try{
+    const text = await f.text();
+    const arr = JSON.parse(text);
+    if(!Array.isArray(arr)) throw new Error('format');
+    let count = 0;
+    for(const rec of arr){
+      if(!rec || !rec.img) continue;
+      const { id, ...rest } = rec;
+      await dbAdd(rest);
+      count++;
+    }
+    alert(`已匯入 ${count} 筆明信片`);
+    loadGallery();
+  }catch(err){
+    console.error(err); alert('匯入失敗，請確認檔案格式正確');
+  }
+  e.target.value='';
+});
+
+document.getElementById('lightbox').onclick = ()=> document.getElementById('lightbox').classList.remove('show');
+
+loadGallery();
+</script>
+</body>
+</html>
